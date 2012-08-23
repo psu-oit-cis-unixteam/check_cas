@@ -7,13 +7,6 @@ def login_elements(tag):
     """A filter to find cas login form elements"""
     return tag.has_key('name') and tag.has_key('value')
 
-def cas_messages(tag):
-    """Filter for messages from CAS post-POST"""
-    if tag.has_key('id') and tag.has_key('class'):
-        return tag['id'] is 'message'
-    else:
-        return False
-
 def login(username, password, url):
     cas_page = requests.get(url)
     cas_doc = soupy(cas_page.text)

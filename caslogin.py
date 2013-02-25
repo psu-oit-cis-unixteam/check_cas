@@ -1,7 +1,13 @@
 #!/usr/bin/env python
 
 from bs4 import BeautifulSoup as soupy
+import argparse
+import nagiosplugin
 import requests
+
+"""
+Attempts to log in to CAS.
+"""
 
 def login_elements(tag):
     """A filter to find cas login form elements"""
@@ -26,13 +32,10 @@ def login(username, password, url):
     else:
         return False
 
-if __name__ == '__main__':
-    import argparse
-    import getpass
-
-    parser = argparse.ArgumentParser(description='Attempt to log in to CAS.')
-    parser.add_argument('-u', dest='username', default=getpass.getuser())
-    parser.add_argument('-p', dest='password')
+ # ensures the script always exits with a nagios-friendy return
+@nagiosplugin.guarded
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('URL', type=str, nargs=1,
                         help="CAS base i.e. https://sso.example.com/cas/login")
 
@@ -41,3 +44,6 @@ if __name__ == '__main__':
         prompt = 'Password for "{0.username}" on {0.URL[0]}: '.format(args) 
         args.password = getpass.getpass(prompt)
     print login(args.username, args.password, args.URL[0])
+
+if __name__ == '__main__':
+    main()

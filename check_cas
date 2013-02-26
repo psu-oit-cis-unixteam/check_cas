@@ -32,7 +32,7 @@ def login(username, password, url):
     else:
         return False
 
- # ensures the script always exits with a nagios-friendy return
+ # guarded ensures the script always exits with a nagios-friendy return
 @nagiosplugin.guarded
 def main():
     parser = argparse.ArgumentParser(description=__doc__)

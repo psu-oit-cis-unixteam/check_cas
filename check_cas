@@ -102,9 +102,11 @@ def main():
                             'success_txt',
                             'url',
                           ])
-    cas = CasLogin(config)
-    for result in cas.probe():
-        print result
+    check = nagiosplugin.Check(
+        CasLogin(config),
+        nagiosplugin.ScalarContext('CAS', args.warning, args.critical)
+    )
+    check.main()
 
 if __name__ == '__main__':
     main()

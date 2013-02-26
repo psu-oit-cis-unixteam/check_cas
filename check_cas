@@ -27,7 +27,7 @@ class Timer(object):
 
     def __exit__(self, *args):
         end = self.timer()
-        self.elapsed_secs = (end - self.start) * 1000
+        self.elapsed_secs = (end - self.start)
 
 class CasLogin(nagiosplugin.Resource):
     

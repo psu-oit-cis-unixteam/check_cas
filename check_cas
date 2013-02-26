@@ -1,7 +1,10 @@
 #!/usr/bin/env python
 
 from bs4 import BeautifulSoup as soupy
+from timeit import default_timer
+
 import argparse
+import logging
 import nagiosplugin
 import requests
 
@@ -13,26 +16,56 @@ def login_elements(tag):
     """A filter to find cas login form elements"""
     return tag.has_key('name') and tag.has_key('value')
 
-def login(username, password, url):
-    cas_page = requests.get(url)
-    cas_doc = soupy(cas_page.text)
-    form_inputs = cas_doc.find_all(login_elements)
+class Timer(object):
 
-    login_data = dict()
-    for tag in form_inputs:
-        login_data[tag['name']] = tag['value']
+    def __init__(self):
+        self.timer = default_timer
 
-    login_data['username'] = username
-    login_data['password'] = password
+    def __enter__(self):
+        self.start = self.timer()
+        return self
 
-    signin_page = requests.post(url, login_data, cookies=cas_page.cookies)
+    def __exit__(self, *args):
+        end = self.timer()
+        self.elapsed_secs = (end - self.start) * 1000
 
-    if "Log In Successful" in signin_page.text:
-        return signin_page.cookies
-    else:
-        return False
+class CasLogin(nagiosplugin.Resource):
+    
+    def __init__(self, url, user, password, success_txt='Log In Successful'):
+        self.url      = url
+        self.user     = user
+        self.password = password
 
- # guarded ensures the script always exits with a nagios-friendy return
+    def probe(self):
+        with Timer() as init_timing:
+            page = requests.get(self.url)
+
+        cas_doc = soupy(page.text)
+        form_inputs = cas_doc.find_all(login_elements)
+
+        login_data = dict()
+        for tag in form_inputs:
+            login_data[tag['name']] = tag['value']
+
+        login_data['username'] = self.user
+        login_data['password'] = self.password
+
+        with Timer() as login_timing:
+            page = requests.post(self.url, login_data, cookies=page.cookies)
+
+        if success_text in page.text:
+            yield nagiosplugin.Metric('cas_page_load',
+                                      init_timing.elapsed_secs,
+                                      uom='s',
+                                      context='CAS')
+            yield nagiosplugin.Metric('cas_login',
+                                      login_timing.elapsed_secs,
+                                      uom='s',
+                                      context='CAS')
+        else:
+            return False
+
+# guarded ensures the script always exits with a nagios-friendy return
 @nagiosplugin.guarded
 def main():
     parser = argparse.ArgumentParser(description=__doc__)

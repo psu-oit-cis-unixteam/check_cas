@@ -36,14 +36,17 @@ def login(username, password, url):
 @nagiosplugin.guarded
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('-w', '--warning', metavar='milliseconds',
+                        help='CAS is warning if response time is > n ms.')
+    parser.add_argument('-c', '--critical', metavar='milliseconds',
+                        help='CAS is critical if response time is > n ms.')
+    parser.add_argument('-v', '--verbose', action='count', default=0,
+                        help='add Vs for more verbosity.')
     parser.add_argument('URL', type=str, nargs=1,
                         help="CAS base i.e. https://sso.example.com/cas/login")
 
     args = parser.parse_args()
-    if not args.password:
-        prompt = 'Password for "{0.username}" on {0.URL[0]}: '.format(args) 
-        args.password = getpass.getpass(prompt)
-    print login(args.username, args.password, args.URL[0])
+    print args
 
 if __name__ == '__main__':
     main()

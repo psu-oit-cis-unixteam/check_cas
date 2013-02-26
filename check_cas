@@ -67,7 +67,7 @@ class CasLogin(nagiosplugin.Resource):
                                       context='CAS')
 
 def parse_config(config_file, section, keys):
-    """Returns a dict with the keys of in section@config_file."""
+    """Returns a dict with the requested keys from section@config_file."""
     parser = SafeConfigParser()
     parser.read(os.path.abspath(config_file))
     configuration = dict()
@@ -87,7 +87,7 @@ def main():
                         help='add Vs for more verbosity.')
     parser.add_argument('--extra-opts', type=str,
                         default='cas_check@/etc/nagios/private/custom.ini',
-                        help='Look for username and password in section@/ini/file/path.ini')
+                        help='Look for check params in section@/ini/file/path.ini')
 
     args = parser.parse_args()
 

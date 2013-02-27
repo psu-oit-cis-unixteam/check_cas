@@ -42,6 +42,11 @@ class CasLogin(nagiosplugin.Resource):
     def probe(self):
         with Timer() as init_timing:
             page = requests.get(self.url)
+        
+        yield nagiosplugin.Metric('cas_page_load',
+                                  init_timing.elapsed_secs,
+                                  uom='s',
+                                  context='CAS')
 
         cas_doc = soupy(page.text)
         form_inputs = cas_doc.find_all(login_elements)
@@ -57,10 +62,6 @@ class CasLogin(nagiosplugin.Resource):
             page = requests.post(self.url, login_data, cookies=page.cookies)
 
         if self.success_txt in page.text:
-            yield nagiosplugin.Metric('cas_page_load',
-                                      init_timing.elapsed_secs,
-                                      uom='s',
-                                      context='CAS')
             yield nagiosplugin.Metric('cas_login',
                                       login_timing.elapsed_secs,
                                       uom='s',

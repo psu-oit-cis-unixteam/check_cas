@@ -14,6 +14,16 @@ import requests
 Attempts to log in to CAS.
 """
 
+# acquire a logger and set defaults
+log = logging.getLogger(__file__)
+log.propagate = False
+fmat = '[%(name)s %(levelname)s] %(asctime)s in %(funcName)s(): %(message)s'
+fmat = logging.Formatter(fmat)
+console_log = logging.StreamHandler()
+console_log.setLevel(logging.DEBUG)
+console_log.setFormatter(fmat)
+log.addHandler(console_log)
+
 def login_elements(tag):
     """A filter to find cas login form elements"""
     return tag.has_key('name') and tag.has_key('value')
@@ -40,6 +50,8 @@ class CasLogin(nagiosplugin.Resource):
         self.success_txt = config_dict['success_txt']
 
     def probe(self):
+        log.debug('probe beginning for url="%s"', self.url)
+
         with Timer() as init_timing:
             page = requests.get(self.url)
         
@@ -47,6 +59,11 @@ class CasLogin(nagiosplugin.Resource):
                                   init_timing.elapsed_secs,
                                   uom='s',
                                   context='CAS')
+        
+        log.info('GETting url="%s" took response_time="%s"',
+                 self.url,
+                 init_timing.elapsed_secs,
+                )
 
         cas_doc = soupy(page.text)
         form_inputs = cas_doc.find_all(login_elements)
@@ -58,6 +75,7 @@ class CasLogin(nagiosplugin.Resource):
         login_data['username'] = self.username
         login_data['password'] = self.password
 
+        log.debug('Logging in login_data="%s"', str(login_data))
         with Timer() as login_timing:
             page = requests.post(self.url, login_data, cookies=page.cookies)
 
@@ -66,31 +84,51 @@ class CasLogin(nagiosplugin.Resource):
                                       login_timing.elapsed_secs,
                                       uom='s',
                                       context='CAS')
+        log.info('POSTing to url="%s" took response_time="%s"',
+                 self.url,
+                 login_timing.elapsed_secs,
+                )
 
 def parse_config(config_file, section, keys):
     """Returns a dict with the requested keys from section@config_file."""
     parser = SafeConfigParser()
-    parser.read(os.path.abspath(config_file))
+    config = os.path.abspath(config_file)
+    log.info('section="%s" in file="%s"', section, config)
+    parser.read(config)
     configuration = dict()
     for k in keys:
         configuration[k] = parser.get(section, k)
+    log.debug('configuration=%s', str(configuration))
     return configuration
 
 # guarded ensures the script always exits with a nagios-friendy return
 @nagiosplugin.guarded
 def main():
+    # set up the argument parser
     parser = argparse.ArgumentParser(description=__doc__)
+
     parser.add_argument('-w', '--warning', metavar='milliseconds',
                         help='CAS is warning if response time is > n ms.')
     parser.add_argument('-c', '--critical', metavar='milliseconds',
                         help='CAS is critical if response time is > n ms.')
-    parser.add_argument('-v', '--verbose', action='count', default=0,
-                        help='add Vs for more verbosity.')
+    parser.add_argument('-v', '--verbose', action='count',
+                        help='Up to -vvvv for added detail.')
     parser.add_argument('--extra-opts', type=str,
                         default='cas_check@/etc/nagios/private/custom.ini',
                         help='Look for check params in section@/ini/file/path.ini')
 
     args = parser.parse_args()
+    
+    # verbosity handling
+    if args.verbose and args.verbose <= 4:
+        verbosity = logging.FATAL - (args.verbose * 10) # logging.FATAL==50
+    elif args.verbose > 4:
+        verbosity = logging.DEBUG                       # logging.DEBUG==10
+    else:
+        verbosity = logging.FATAL
+
+    log.setLevel(verbosity)
+    log.debug('command="%s"', ' '.join(sys.argv))
 
     # split the section from the file name
     config_section, config_file = args.extra_opts.split('@')

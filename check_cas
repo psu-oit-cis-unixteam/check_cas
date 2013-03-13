@@ -9,6 +9,7 @@ import logging
 import nagiosplugin
 import os
 import requests
+import sys
 
 """
 Attempts to log in to CAS.

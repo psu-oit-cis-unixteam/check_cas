@@ -90,6 +90,14 @@ class CasLogin(nagiosplugin.Resource):
                  login_timing.elapsed_secs,
                 )
 
+class CasConnectorLogin(CasLogin):
+
+    def __init__(self, config_dict):
+        super(CasConnectorLogin, self).__init__(config_dict)
+
+    def probe(self):
+        super(CasConnectorLogin, self).probe(config_dict)
+
 def parse_config(config_file, section, keys):
     """Returns a dict with the requested keys from section@config_file."""
     parser = SafeConfigParser()

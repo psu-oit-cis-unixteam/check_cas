@@ -42,30 +42,42 @@ class Timer(object):
         end = self.timer()
         self.elapsed_secs = (end - self.start)
 
-class CasLogin(nagiosplugin.Resource):
+class CasCheck(nagiosplugin.Resource):
     
     def __init__(self, config_dict):
         self.url         = config_dict['url']
+    
+    def get(self):
+        log.debug('probe beginning for url="%s"', self.url)
+
+        with Timer() as self.init_timing:
+            page = requests.get(self.url)
+
+        log.info('GET url="%s" took time="%s"',
+                 self.url,
+                 self.init_timing.elapsed_secs,
+                )
+
+        return page
+
+    def probe(self):
+        self.get()
+        yield nagiosplugin.Metric('cas_page_load',
+                                  self.init_timing.elapsed_secs,
+                                  uom='s',
+                                  context='CAS')
+
+class CasLogin(CasCheck):
+    
+    def __init__(self, config_dict):
+        super(CasLogin, self).__init__(config_dict)
         self.username    = config_dict['username']
         self.password    = config_dict['password']
         self.success_txt = config_dict['success_txt']
 
-    def probe(self):
-        log.debug('probe beginning for url="%s"', self.url)
-
-        with Timer() as init_timing:
-            page = requests.get(self.url)
+    def post(self):
+        page = self.get()
         
-        yield nagiosplugin.Metric('cas_page_load',
-                                  init_timing.elapsed_secs,
-                                  uom='s',
-                                  context='CAS')
-        
-        log.info('GETting url="%s" took response_time="%s"',
-                 self.url,
-                 init_timing.elapsed_secs,
-                )
-
         cas_doc = soupy(page.text)
         form_inputs = cas_doc.find_all(login_elements)
 
@@ -77,17 +89,23 @@ class CasLogin(nagiosplugin.Resource):
         login_data['password'] = self.password
 
         log.debug('Logging in login_data="%s"', str(login_data))
-        with Timer() as login_timing:
+        with Timer() as self.login_timing:
             page = requests.post(self.url, login_data, cookies=page.cookies)
+        
+        return page
+
+    def probe(self):
+        page = self.post()
 
         if self.success_txt in page.text:
             yield nagiosplugin.Metric('cas_login',
-                                      login_timing.elapsed_secs,
+                                      self.login_timing.elapsed_secs,
                                       uom='s',
                                       context='CAS')
+
         log.info('POSTing to url="%s" took response_time="%s"',
                  self.url,
-                 login_timing.elapsed_secs,
+                 self.login_timing.elapsed_secs,
                 )
 
 class CasConnectorLogin(CasLogin):

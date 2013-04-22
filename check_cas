@@ -48,8 +48,6 @@ class CasCheck(nagiosplugin.Resource):
         self.url         = config_dict['url']
     
     def get(self):
-        log.debug('probe beginning for url="%s"', self.url)
-
         with Timer() as self.init_timing:
             page = requests.get(self.url)
 
@@ -61,6 +59,7 @@ class CasCheck(nagiosplugin.Resource):
         return page
 
     def probe(self):
+        log.debug('probe beginning for url="%s"', self.url)
         self.get()
         yield nagiosplugin.Metric('cas_page_load',
                                   self.init_timing.elapsed_secs,

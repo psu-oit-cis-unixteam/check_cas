@@ -45,8 +45,8 @@ class Timer(object):
 class CasCheck(nagiosplugin.Resource):
     
     def __init__(self, config_dict):
-        self.url         = config_dict['url']
-    
+        self.url         = config_dict['cas_url']
+   
     def get(self):
         with Timer() as self.init_timing:
             page = requests.get(self.url)
@@ -72,7 +72,7 @@ class CasLogin(CasCheck):
         super(CasLogin, self).__init__(config_dict)
         self.username    = config_dict['username']
         self.password    = config_dict['password']
-        self.success_txt = config_dict['success_txt']
+        self.success_txt = config_dict['cas_success_txt']
 
     def post(self):
         page = self.get()
@@ -111,9 +111,20 @@ class CasConnectorLogin(CasLogin):
 
     def __init__(self, config_dict):
         super(CasConnectorLogin, self).__init__(config_dict)
+        self.url = config_dict['service_url']
+        self.target_url = config_dict['target_url']
+
+    def login(self):
+        pass
 
     def probe(self):
-        super(CasConnectorLogin, self).probe(config_dict)
+        page = self.post()
+        
+        yield nagiosplugin.Metric('service_request',
+                                  self.init_timing.elapsed_secs,
+                                  uom='s',
+                                  context='CAS')
+        
 
 def parse_config(config_file, section, keys):
     """Returns a dict with the requested keys from section@config_file."""

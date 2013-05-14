@@ -3,6 +3,7 @@
 from ConfigParser import SafeConfigParser
 from bs4 import BeautifulSoup as soupy
 from timeit import default_timer
+from urlparse import urljoin
 
 import argparse
 import logging
@@ -106,10 +107,15 @@ class CasLogin(CasCheck):
         login_data['username'] = self.username
         login_data['password'] = self.password
 
-        log.debug('Logging in login_data="%s"', str(login_data))
+        log.debug('Logging in to URL="%s" login_data="%s"', page.url, str(login_data))
+
+        # use page.url not self.url as they will differ in connectors
+        post_target = urljoin(page.url, action)
+
         with Timer() as self.login_timing:
-            page = requests.post(self.url, login_data, cookies=page.cookies)
-            page = process_redirects(page)
+            page = requests.post(post_target, login_data, cookies=page.cookies)
+        
+        log.debug('Got cookies="%s"', str(page.cookies))
         
         return page
 

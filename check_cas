@@ -142,9 +142,6 @@ class CasConnectorLogin(CasLogin):
         self.url = config_dict['service_url']
         self.target_url = config_dict['target_url']
 
-    def login(self):
-        pass
-
     def probe(self):
         page = self.post()
 

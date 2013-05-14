@@ -53,6 +53,7 @@ class Timer(object):
         self.elapsed_secs = (end - self.start)
 
 class CasCheck(nagiosplugin.Resource):
+    requires = ['cas_url']
     
     def __init__(self, config_dict):
         self.url         = config_dict['cas_url']
@@ -77,6 +78,12 @@ class CasCheck(nagiosplugin.Resource):
                                   context='CAS')
 
 class CasLogin(CasCheck):
+    requires = [
+                'cas_url',
+                'username',
+                'password',
+                'cas_success_txt',
+               ]
     
     def __init__(self, config_dict):
         super(CasLogin, self).__init__(config_dict)
@@ -119,6 +126,13 @@ class CasLogin(CasCheck):
                 )
 
 class CasConnectorLogin(CasLogin):
+    requires = [
+                'cas_url',
+                'username',
+                'password',
+                'cas_success',
+                'service_url',
+               ]
 
     def __init__(self, config_dict):
         super(CasConnectorLogin, self).__init__(config_dict)
@@ -137,17 +151,21 @@ class CasConnectorLogin(CasLogin):
                                   context='CAS')
         
 
-def parse_config(config_file, section, keys):
+def parse_config(config_file, section):
     """Returns a dict with the requested keys from section@config_file."""
     parser = SafeConfigParser()
     config = os.path.abspath(config_file)
     log.info('section="%s" in file="%s"', section, config)
     parser.read(config)
     configuration = dict()
-    for k in keys:
+    
+    check_class = parser.get(section, 'class')
+    required_keys = globals()[check_class].requires
+
+    for k in required_keys:
         configuration[k] = parser.get(section, k)
     log.debug('configuration=%s', str(configuration))
-    return configuration
+    return check_class, configuration
 
 # guarded ensures the script always exits with a nagios-friendy return
 @nagiosplugin.guarded
@@ -181,16 +199,10 @@ def main():
     # split the section from the file name
     config_section, config_file = args.extra_opts.split('@')
 
-    config = parse_config(config_file,
-                          config_section,
-                          [
-                            'username',
-                            'password',
-                            'success_txt',
-                            'url',
-                          ])
+    check_class, config = parse_config(config_file, config_section)
+
     check = nagiosplugin.Check(
-        CasLogin(config),
+        globals()[check_class](config),
         nagiosplugin.ScalarContext('CAS', args.warning, args.critical)
     )
     check.main()

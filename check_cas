@@ -147,7 +147,7 @@ class CasConnectorLogin(CasLogin):
 
     def probe(self):
         page = self.post()
-        
+
         yield nagiosplugin.Metric('service_request',
                                   self.init_timing.elapsed_secs,
                                   uom='s',

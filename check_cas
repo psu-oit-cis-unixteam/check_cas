@@ -35,7 +35,7 @@ def process_redirects(response):
             log.info('URL=%s status=%s', hop.url, hop.status_code)
             if 300 <= hop.status_code < 400:
                 log.info('Redirecting to URL=%s', hop.headers['location'])
-                return process_redirects(requests.get(hop.headers['location']))
+                return requests.get(hop.headers['location'])
     else:
         return response
 
@@ -96,6 +96,8 @@ class CasLogin(CasCheck):
         
         cas_doc = soupy(page.text)
         form_inputs = cas_doc.find_all(login_elements)
+        # go with whatever action CAS asks for
+        action = cas_doc.findAll('form')[0].attrs['action']
 
         login_data = dict()
         for tag in form_inputs:

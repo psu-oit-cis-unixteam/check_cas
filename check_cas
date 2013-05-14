@@ -29,6 +29,16 @@ def login_elements(tag):
     """A filter to find cas login form elements"""
     return tag.has_key('name') and tag.has_key('value')
 
+def process_redirects(response):
+    if response.history:
+        for hop in response.history:
+            log.info('URL=%s status=%s', hop.url, hop.status_code)
+            if 300 <= hop.status_code < 400:
+                log.info('Redirecting to URL=%s', hop.headers['location'])
+                return process_redirects(requests.get(hop.headers['location']))
+    else:
+        return response
+
 class Timer(object):
 
     def __init__(self):
@@ -49,7 +59,7 @@ class CasCheck(nagiosplugin.Resource):
    
     def get(self):
         with Timer() as self.init_timing:
-            page = requests.get(self.url)
+            page = process_redirects(requests.get(self.url, allow_redirects=True))
 
         log.info('GET url="%s" took time="%s"',
                  self.url,
@@ -90,6 +100,7 @@ class CasLogin(CasCheck):
         log.debug('Logging in login_data="%s"', str(login_data))
         with Timer() as self.login_timing:
             page = requests.post(self.url, login_data, cookies=page.cookies)
+            page = process_redirects(page)
         
         return page
 

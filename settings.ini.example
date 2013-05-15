@@ -7,22 +7,20 @@ class=CasLogin
 username=
 password=
 cas_url=https://example.com/cas/login
-cas_success_txt=Log In Successful
+cookies=CASPRIVACY,CASTGC,JSESSIONID
 
 [foo_connector]
 class=CasConnectorLogin
 username=
 password=
 cas_url=https://example.com/cas/login
-cas_success_txt=Log In Successful
 service_url=http://foo.example.com
-target_url=https://fooA.com/scgi/x/Isl.exe
+cookies=
 
 [d2l_connector]
 class=CasConnectorLogin
 username=
 password=
 cas_url=https://example.com/cas/login
-cas_success_txt=Log In Successful
 service_url=http://bar.example.com
-target_url=https://barA.example.com/homepage/home.asp?foo=True
+cookies=

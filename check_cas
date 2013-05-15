@@ -83,14 +83,13 @@ class CasLogin(CasCheck):
                 'cas_url',
                 'username',
                 'password',
-                'cas_success_txt',
+                'cookies',
                ]
     
     def __init__(self, config_dict):
         super(CasLogin, self).__init__(config_dict)
         self.username    = config_dict['username']
         self.password    = config_dict['password']
-        self.success_txt = config_dict['cas_success_txt']
 
     def post(self):
         page = self.get()
@@ -116,6 +115,8 @@ class CasLogin(CasCheck):
             page = requests.post(post_target, login_data, cookies=page.cookies)
         
         log.debug('Got cookies="%s"', str(page.cookies))
+
+
         
         return page
 
@@ -138,15 +139,12 @@ class CasConnectorLogin(CasLogin):
                 'cas_url',
                 'username',
                 'password',
-                'cas_success_txt',
                 'service_url',
-                'target_url',
                ]
 
     def __init__(self, config_dict):
         super(CasConnectorLogin, self).__init__(config_dict)
         self.url = config_dict['service_url']
-        self.target_url = config_dict['target_url']
 
     def probe(self):
         page = self.post()

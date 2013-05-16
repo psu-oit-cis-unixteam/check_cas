@@ -90,6 +90,11 @@ class CasLogin(CasCheck):
         super(CasLogin, self).__init__(config_dict)
         self.username    = config_dict['username']
         self.password    = config_dict['password']
+        self.cookies     = set(config_dict['cookies'].split(','))
+
+    def got_good_cookies(self, cookies):
+        cookies = set(cookies.keys())
+        return (cookies == self.cookies)
 
     def post(self):
         page = self.get()
@@ -115,19 +120,19 @@ class CasLogin(CasCheck):
             page = requests.post(post_target, login_data, cookies=page.cookies)
         
         log.debug('Got cookies="%s"', str(page.cookies))
-
-
         
         return page
 
     def probe(self):
         page = self.post()
 
-        if self.success_txt in page.text:
+        if self.got_good_cookies(page.cookies):
             yield nagiosplugin.Metric('cas_login',
-                                      self.login_timing.elapsed_secs,
-                                      uom='s',
-                                      context='CAS')
+                                       self.login_timing.elapsed_secs,
+                                       uom='s',
+                                       context='CAS')
+        else:
+            return
 
         log.info('POSTing to url="%s" took response_time="%s"',
                  self.url,
@@ -140,6 +145,7 @@ class CasConnectorLogin(CasLogin):
                 'username',
                 'password',
                 'service_url',
+                'cookies',
                ]
 
     def __init__(self, config_dict):
@@ -149,10 +155,13 @@ class CasConnectorLogin(CasLogin):
     def probe(self):
         page = self.post()
 
-        yield nagiosplugin.Metric('service_request',
-                                  self.init_timing.elapsed_secs,
-                                  uom='s',
-                                  context='CAS')
+        if self.got_good_cookies(page.cookies):
+            yield nagiosplugin.Metric('service_request',
+                                      self.init_timing.elapsed_secs,
+                                      uom='s',
+                                      context='CAS')
+        else:
+            return
         
 
 def parse_config(config_file, section):

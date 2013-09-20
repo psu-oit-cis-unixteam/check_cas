@@ -26,6 +26,18 @@ console_log.setLevel(logging.DEBUG)
 console_log.setFormatter(fmat)
 log.addHandler(console_log)
 
+
+class CasMetric(nagiosplugin.metric.Metric):
+    def __init__(self, name, value, **kargs):
+        super(nagiosplugin.metric.Metric,self).__init__(name,value, **kargs)
+
+    def evaluate(self):
+        if self.value == None:
+            return nagiosplugin.result.Result( nagiosplugin.Critical ) 
+        else:
+            return nagiosplugin.result.Result( nagiosplugin.Ok )
+   
+ 
 def login_elements(tag):
     """A filter to find cas login form elements"""
     return tag.has_key('name') and tag.has_key('value')
@@ -73,10 +85,11 @@ class CasCheck(nagiosplugin.Resource):
     def probe(self):
         log.debug('probe beginning for url="%s"', self.url)
         self.get()
-        yield nagiosplugin.Metric('cas_page_load',
-                                  self.init_timing.elapsed_secs,
-                                  uom='s',
-                                  context='CAS')
+        yield CasMetric('cas_page_load',
+                        self.init_timing.elapsed_secs,
+                        uom='s',
+                        context='CAS')
+                        
 
 class CasLogin(CasCheck):
     requires = [
@@ -126,13 +139,25 @@ class CasLogin(CasCheck):
     def probe(self):
         page = self.post()
 
-        if self.got_good_cookies(page.cookies):
+        cas_resp = soupy(page.text)
+        errors = cas_resp.find(id='status')
+        msg = cas_resp.find(id='msg')
+
+        success = msg and not errors
+
+        log.info('success=%s errors=%s',
+                 success, errors)
+        if success:
             yield nagiosplugin.Metric('cas_login',
-                                       self.login_timing.elapsed_secs,
-                                       uom='s',
-                                       context='CAS')
+                                      self.login_timing.elapsed_secs,
+                                      uom='s',
+                                      context='CAS')
+            
         else:
-            return
+            yield CasMetric('cas_login',
+                            None,
+                            context='CAS')
+
 
         log.info('POSTing to url="%s" took response_time="%s"',
                  self.url,
